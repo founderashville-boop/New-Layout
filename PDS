@@ -45,9 +45,9 @@ dist
 .DS_Store'''
 
 files[".env.example"] = r'''DISCORD_CLIENT_ID=your_discord_application_client_id
-DISCORD_CLIENT_SECRET=your_discord_application_client_secret
+DISCORD_CLIENT_SECRET=Jh9a8-x2AuYdYi5r1UgPSISiFNzPsIeq
 DISCORD_REDIRECT_URI=http://localhost:5173/api/discord/callback
-VITE_DISCORD_CLIENT_ID=your_discord_application_client_id
+VITE_DISCORD_CLIENT_ID=1550728707423871068
 VITE_DISCORD_REDIRECT_URI=http://localhost:5173/api/discord/callback'''
 
 files["index.html"] = r'''<!doctype html>
