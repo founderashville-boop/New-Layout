@@ -1,0 +1,297 @@
+from pathlib import Path
+import zipfile, textwrap, os
+
+root = Path("/mnt/data/pds-discord-templates")
+(root / "src").mkdir(parents=True, exist_ok=True)
+(root / "api" / "discord").mkdir(parents=True, exist_ok=True)
+(root / "public").mkdir(parents=True, exist_ok=True)
+
+files = {}
+
+files["package.json"] = r'''{
+  "name": "pds-discord-templates",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.0.5"
+  }
+}'''
+
+files["vite.config.js"] = r'''import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig({
+  plugins: [react()],
+  server: { port: 5173 }
+});'''
+
+files[".gitignore"] = r'''node_modules
+dist
+.env
+.env.local
+.vercel
+.DS_Store'''
+
+files[".env.example"] = r'''DISCORD_CLIENT_ID=your_discord_application_client_id
+DISCORD_CLIENT_SECRET=your_discord_application_client_secret
+DISCORD_REDIRECT_URI=http://localhost:5173/api/discord/callback
+VITE_DISCORD_CLIENT_ID=your_discord_application_client_id
+VITE_DISCORD_REDIRECT_URI=http://localhost:5173/api/discord/callback'''
+
+files["index.html"] = r'''<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="PDS Templates™ — Discord server templates by Prime District Studios™." />
+    <title>PDS Templates™ | Prime District Studios™</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>'''
+
+files["src/main.jsx"] = r'''import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import "./index.css";
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode><App /></React.StrictMode>
+);'''
+
+# Reuse a compact but complete app from the prior response, enhanced with real OAuth redirect.
+files["src/App.jsx"] = r'''import React, { useMemo, useState } from "react";
+import {
+  Search, Menu, X, ChevronRight, Star, Download, Heart, Plus,
+  LayoutDashboard, Package, Settings, Shield, LogIn, Gamepad2,
+  Car, Music, Video, Building2, GraduationCap, Code2, Users,
+  ArrowRight, CheckCircle2, Sparkles
+} from "lucide-react";
+
+const categories = [
+  ["Gaming", Gamepad2], ["Roleplay", Car], ["Music", Music], ["Creators", Video],
+  ["Business", Building2], ["Education", GraduationCap], ["Development", Code2], ["Community", Users]
+];
+
+const templates = [
+  {id:1,name:"Oakwood State Roleplay",category:"Roleplay",description:"A complete professional Roblox roleplay Discord server structure.",rating:4.9,downloads:2431,channels:87,roles:42,color:"blue"},
+  {id:2,name:"SRU_UnstoppableTV",category:"Creators",description:"A complete community server for gaming creators, livestreamers, and fans.",rating:4.8,downloads:1824,channels:63,roles:29,color:"purple"},
+  {id:3,name:"PDS Community",category:"Community",description:"Official-style community Discord structure for gaming development groups.",rating:5,downloads:3156,channels:72,roles:35,color:"cyan"},
+  {id:4,name:"Gaming Central",category:"Gaming",description:"Modern gaming community layout with support, announcements, and events.",rating:4.7,downloads:1462,channels:55,roles:24,color:"green"},
+  {id:5,name:"Music Network",category:"Music",description:"Community layout for artists, producers, DJs, and music communities.",rating:4.8,downloads:982,channels:48,roles:21,color:"pink"},
+  {id:6,name:"Developer Hub",category:"Development",description:"Organized Discord server for developers, projects, support, and collaboration.",rating:4.9,downloads:1238,channels:61,roles:27,color:"orange"}
+];
+
+export default function App() {
+  const [page,setPage]=useState("home"), [menu,setMenu]=useState(false), [search,setSearch]=useState("");
+  const [category,setCategory]=useState("All"), [selected,setSelected]=useState(null);
+  const [favorites,setFavorites]=useState([]), [modal,setModal]=useState(null);
+
+  const filtered=useMemo(()=>templates.filter(t=>
+    (category==="All"||t.category===category) &&
+    (t.name+" "+t.description).toLowerCase().includes(search.toLowerCase())
+  ),[category,search]);
+
+  const go=(p,c="All")=>{setCategory(c);setPage(p);setMenu(false);window.scrollTo(0,0)};
+  const open=(t)=>{setSelected(t);setPage("template");window.scrollTo(0,0)};
+  const fav=(id)=>setFavorites(v=>v.includes(id)?v.filter(x=>x!==id):[...v,id]);
+
+  function discordLogin(){
+    const clientId=import.meta.env.VITE_DISCORD_CLIENT_ID;
+    const redirect=import.meta.env.VITE_DISCORD_REDIRECT_URI||`${location.origin}/api/discord/callback`;
+    if(!clientId){setModal("login");return}
+    const q=new URLSearchParams({client_id:clientId,redirect_uri:redirect,response_type:"code",scope:"identify"});
+    location.href=`https://discord.com/oauth2/authorize?${q}`;
+  }
+
+  return <div className="app">
+    <nav className="nav">
+      <div className="brand" onClick={()=>go("home")}><b>PDS</b><span><strong>Prime District Studios™</strong><small>PDS Templates™</small></span></div>
+      <div className="links">
+        <button onClick={()=>go("home")}>Home</button><button onClick={()=>go("templates")}>Templates</button>
+        <button onClick={()=>go("templates")}>Categories</button><button onClick={()=>go("dashboard")}>Dashboard</button>
+      </div>
+      <button className="login" onClick={discordLogin}><LogIn size={17}/> Login with Discord</button>
+      <button className="hamb" onClick={()=>setMenu(!menu)}>{menu?<X/>:<Menu/>}</button>
+    </nav>
+    {menu&&<div className="mobileLinks"><button onClick={()=>go("home")}>Home</button><button onClick={()=>go("templates")}>Templates</button><button onClick={()=>go("dashboard")}>Dashboard</button><button onClick={discordLogin}>Login with Discord</button></div>}
+
+    {page==="home"&&<Home search={search} setSearch={setSearch} go={go} setModal={setModal} open={open} fav={fav} favorites={favorites}/>}
+    {page==="templates"&&<Templates search={search} setSearch={setSearch} category={category} setCategory={setCategory} filtered={filtered} open={open} fav={fav} favorites={favorites}/>}
+    {page==="template"&&selected&&<Details t={selected} favorite={favorites.includes(selected.id)} fav={fav} back={()=>go("templates")}/>}
+    {page==="dashboard"&&<Dashboard favorites={favorites} setModal={setModal} open={open}/>}
+    {page==="admin"&&<Admin/>}
+
+    <footer><div className="footerTop"><div className="brand"><b>PDS</b><span><strong>Prime District Studios™</strong><small>Building Worlds. Creating Experiences.</small></span></div><div className="footCols"><div><strong>Platform</strong><button onClick={()=>go("home")}>Home</button><button onClick={()=>go("templates")}>Templates</button><button onClick={()=>go("dashboard")}>Dashboard</button></div><div><strong>Community</strong><button>Discord</button><button>Support</button><button onClick={()=>setModal("submit")}>Submit Template</button></div><div><strong>Legal</strong><button>Privacy</button><button>Terms</button><button>Guidelines</button></div></div></div><div className="footBottom">© 2026 Prime District Studios™. All rights reserved.<span>PDS Templates™</span></div></footer>
+
+    {modal==="login"&&<Modal close={()=>setModal(null)}><div className="modalLogo">PDS</div><h2>Welcome to PDS Templates™</h2><p>Sign in with Discord to save templates, submit templates, and manage your account.</p><button className="discord" onClick={discordLogin}><LogIn size={18}/> Continue with Discord</button><small>Secure Discord OAuth2 authentication.</small></Modal>}
+    {modal==="submit"&&<Submit close={()=>setModal(null)}/>}
+  </div>
+}
+
+function Home({search,setSearch,go,setModal,open,fav,favorites}){
+  return <main><section className="hero"><div className="heroContent"><div className="eyebrow"><Sparkles size={15}/> POWERED BY PRIME DISTRICT STUDIOS™</div><h1>Build Your Discord.<br/><em>Your Way.</em></h1><p>Discover professionally designed Discord server templates for communities, gaming, roleplay, creators, businesses, and more.</p><div className="heroSearch"><Search/><input value={search} onChange={e=>setSearch(e.target.value)} onKeyDown={e=>e.key==="Enter"&&go("templates")} placeholder="Search Discord templates..."/><button onClick={()=>go("templates")}>Search</button></div><div className="actions"><button className="primary" onClick={()=>go("templates")}>Explore Templates <ArrowRight size={17}/></button><button className="secondary" onClick={()=>setModal("submit")}><Plus size={17}/> Submit Template</button></div></div></section>
+  <section className="section"><Head title="Browse Categories" text="Find the perfect structure for your community."/><div className="catGrid">{categories.map(([n,I])=><button className="cat" key={n} onClick={()=>go("templates",n)}><i><I size={22}/></i><span>{n}</span><ChevronRight size={16}/></button>)}</div></section>
+  <section className="section"><Head title="Featured Templates" text="Templates selected by the PDS community." action="View All" onAction={()=>go("templates")}/><div className="grid">{templates.slice(0,3).map(t=><Card key={t.id} t={t} open={open} fav={fav} favorite={favorites.includes(t.id)}/>)}</div></section>
+  <section className="cta"><div><div className="eyebrow">✓ BUILT FOR COMMUNITIES</div><h2>Have a Discord template to share?</h2><p>Publish your server structure and let the PDS community discover it.</p></div><button className="primary" onClick={()=>setModal("submit")}>Submit Your Template <ArrowRight size={17}/></button></section></main>
+}
+
+function Templates({search,setSearch,category,setCategory,filtered,open,fav,favorites}){
+  return <main className="container"><div className="pageHead"><div><div className="eyebrow">PDS TEMPLATE LIBRARY</div><h1>Discord Templates</h1><p>Discover server structures created by the community.</p></div><div className="libSearch"><Search size={18}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search templates..."/></div></div><div className="filters"><button className={category==="All"?"sel":""} onClick={()=>setCategory("All")}>All</button>{categories.map(([n])=><button key={n} className={category===n?"sel":""} onClick={()=>setCategory(n)}>{n}</button>)}</div>{filtered.length?<div className="grid">{filtered.map(t=><Card key={t.id} t={t} open={open} fav={fav} favorite={favorites.includes(t.id)}/>)}</div>:<div className="empty"><Search size={40}/><h2>No templates found</h2><p>Try another search or category.</p></div>}</main>
+}
+
+function Card({t,open,fav,favorite}){return <article className="card"><div className={`preview ${t.color}`}><DiscordPreview/><button className={`heart ${favorite?"liked":""}`} onClick={e=>{e.stopPropagation();fav(t.id)}}><Heart size={18} fill={favorite?"currentColor":"none"}/></button></div><div className="cardBody"><label>{t.category}</label><h3>{t.name}</h3><p>{t.description}</p><div className="meta"><span><Star size={14} fill="currentColor"/> {t.rating}</span><span><Download size={14}/> {t.downloads.toLocaleString()}</span></div><button className="view" onClick={()=>open(t)}>View Template <ChevronRight size={16}/></button></div></article>}
+
+function DiscordPreview(){return <div className="discordPrev"><aside><b>PDS</b><i></i><i></i><i></i></aside><div className="channels"><small>INFORMATION</small><span># welcome</span><span># announcements</span><span># general</span><small>COMMUNITY</small><span># media</span><span># suggestions</span></div></div>}
+
+function Details({t,favorite,fav,back}){return <main className="container"><button className="back" onClick={back}>← Back to Templates</button><div className="detail"><div className={`detailPreview ${t.color}`}><DiscordPreview/></div><div><label>{t.category}</label><h1>{t.name}</h1><p>{t.description}</p><div className="rating"><Star size={18} fill="currentColor"/> <b>{t.rating}</b> · {t.downloads.toLocaleString()} downloads</div><div className="actions"><button className="primary" onClick={()=>alert("Connect your Discord server-install backend to enable one-click installation.")}><Download size={17}/> Use Template</button><button className="secondary" onClick={()=>fav(t.id)}><Heart size={17} fill={favorite?"currentColor":"none"}/> {favorite?"Saved":"Favorite"}</button></div></div></div><div className="detailGrid"><section className="panel"><h2>Server Structure</h2>{[["📢 INFORMATION",["welcome","rules","announcements","server-information"]],["💬 COMMUNITY",["general","media","suggestions","support"]],["🚓 DEPARTMENTS",["law-enforcement","fire-ems","department-info"]],["🛡️ STAFF",["staff-chat","reports","staff-announcements"]]].map(([n,c])=><div className="structure" key={n}><strong>{n}</strong>{c.map(x=><span key={x}># {x}</span>)}</div>)}</section><section className="panel"><h2>Template Information</h2>{[["Created by",t.creator||"Prime District Studios™"],["Category",t.category],["Channels",t.channels],["Roles",t.roles],["Downloads",t.downloads.toLocaleString()]].map(([a,b])=><div className="info" key={a}><span>{a}</span><b>{b}</b></div>)}</section></div></main>}
+
+function Dashboard({favorites,setModal,open}){let favs=templates.filter(t=>favorites.includes(t.id));return <main className="container"><div className="dashboard"><aside className="side"><div className="user"><b>P</b><span><strong>PDS User</strong><small>Community Member</small></span></div><button className="active"><LayoutDashboard/> Overview</button><button><Package/> My Templates</button><button><Heart/> Favorites</button><button onClick={()=>setModal("submit")}><Plus/> Submit Template</button><button><Settings/> Settings</button></aside><section><div className="pageHead"><div><div className="eyebrow">DASHBOARD</div><h1>Welcome back.</h1><p>Manage your PDS Templates account.</p></div></div><div className="stats">{[["Templates","12",Package],["Downloads","8,421",Download],["Favorites",favorites.length,Heart],["Rating","4.9",Star]].map(([a,b,I])=><div className="stat" key={a}><I/><span>{a}<b>{b}</b></span></div>)}</div><Head title="Your Favorites" text="Templates you have saved."/><div className="grid">{favs.length?favs.map(t=><Card key={t.id} t={t} open={open} fav={()=>{}} favorite/>):<div className="empty"><Heart size={32}/><h3>No favorites yet</h3></div>}</div></section></div></main>}
+
+function Admin(){return <main className="container"><div className="pageHead"><div><div className="eyebrow">PDS ADMINISTRATION</div><h1>Admin Center</h1><p>Manage templates, users, moderation, and platform settings.</p></div></div><div className="stats">{[["Templates","1,284",Package],["Users","8,492",Users],["Downloads","42,891",Download],["Pending Reviews","17",Shield]].map(([a,b,I])=><div className="stat" key={a}><I/><span>{a}<b>{b}</b></span></div>)}</div><div className="adminGrid">{[["Templates",Package],["Users",Users],["Moderation",Shield],["Settings",Settings]].map(([x,I])=><button className="adminCard" key={x}><I/><span><b>{x}</b><small>Manage PDS {x.toLowerCase()}.</small></span><ChevronRight/></button>)}</div></main>}
+
+function Head({title,text,action,onAction}){return <div className="sectionHead"><div><h2>{title}</h2><p>{text}</p></div>{action&&<button onClick={onAction}>{action} <ArrowRight size={16}/></button>}</div>}
+
+function Modal({close,children}){return <div className="overlay" onClick={close}><div className="modal" onClick={e=>e.stopPropagation()}><button className="close" onClick={close}><X/></button>{children}</div></div>}
+
+function Submit({close}){const [done,setDone]=useState(false);return <Modal close={close}>{done?<div className="success"><CheckCircle2 size={50}/><h2>Submitted!</h2><p>Your template has been submitted for PDS review.</p><button className="primary" onClick={close}>Done</button></div>:<><div className="modalLogo">PDS</div><h2>Submit a Template</h2><p>Share your Discord server structure with the PDS community.</p><form onSubmit={e=>{e.preventDefault();setDone(true)}}><label>Template Name<input required placeholder="My Discord Server"/></label><label>Category<select required defaultValue=""><option value="" disabled>Select category</option>{categories.map(([n])=><option key={n}>{n}</option>)}</select></label><label>Description<textarea required rows="4" placeholder="Describe your template..."/></label><button className="primary full">Submit for Review</button></form></>}</Modal>}
+
+function AppUnused(){return null}
+'''
+
+files["src/index.css"] = r'''*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#07090d;color:#f5f7fb;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,textarea,select{font:inherit}button{cursor:pointer}button,input,textarea,select{outline:0}.app{min-height:100vh}.nav{height:76px;padding:0 5%;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20;background:#07090ddd;backdrop-filter:blur(18px);border-bottom:1px solid #ffffff12}.brand{display:flex;align-items:center;gap:11px;cursor:pointer}.brand>b,.modalLogo{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:linear-gradient(135deg,#536dfe,#7849ff);font-weight:900;font-size:13px}.brand strong,.brand small{display:block}.brand strong{font-size:13px}.brand small{font-size:10px;color:#8992a3;margin-top:2px}.links{display:flex;gap:4px}.links button,.mobileLinks button{border:0;background:transparent;color:#929aaa;padding:10px 14px;border-radius:9px}.links button:hover,.mobileLinks button:hover{background:#ffffff09;color:#fff}.login,.secondary{display:flex;align-items:center;gap:8px;border:1px solid #ffffff12;background:#ffffff08;color:#fff;padding:10px 14px;border-radius:10px}.hamb{display:none;border:0;background:transparent;color:#fff}.mobileLinks{display:none}.hero{min-height:650px;display:grid;place-items:center;text-align:center;padding:90px 20px;background:radial-gradient(circle at 50% 0,#536dfe20,transparent 38%)}.heroContent{max-width:900px}.eyebrow{display:inline-flex;align-items:center;gap:7px;color:#8da0ff;font-size:11px;font-weight:800;letter-spacing:.06em;margin-bottom:18px}.hero h1{font-size:clamp(48px,8vw,86px);line-height:.98;letter-spacing:-.055em;margin:0}.hero h1 em{font-style:normal;background:linear-gradient(90deg,#6e83ff,#ad72ff);background-clip:text;-webkit-background-clip:text;color:transparent}.hero p{max-width:680px;margin:28px auto;color:#9da5b5;font-size:17px;line-height:1.7}.heroSearch{max-width:680px;margin:30px auto 18px;display:flex;align-items:center;padding:7px 7px 7px 17px;border:1px solid #ffffff14;background:#ffffff08;border-radius:14px}.heroSearch svg{color:#737d90}.heroSearch input{flex:1;min-width:0;border:0;background:transparent;color:#fff;padding:13px}.heroSearch button,.primary{border:0;padding:12px 18px;border-radius:9px;background:linear-gradient(135deg,#596eff,#7652ff);color:#fff;font-weight:750}.actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}.primary,.secondary{min-height:44px;justify-content:center}.section,.container{max-width:1250px;margin:auto;padding:80px 5%}.sectionHead{display:flex;align-items:end;justify-content:space-between;gap:20px;margin-bottom:25px}.sectionHead h2,.pageHead h1{margin:0;font-size:30px;letter-spacing:-.03em}.sectionHead p,.pageHead p{margin:7px 0;color:#7f899b}.sectionHead>button{border:0;background:transparent;color:#8da0ff;font-weight:700;display:flex;align-items:center;gap:7px}.catGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.cat{display:flex;align-items:center;gap:12px;min-height:72px;padding:12px 15px;border:1px solid #ffffff12;border-radius:13px;background:#ffffff08;color:#fff;text-align:left}.cat:hover{border-color:#6f83ff66;background:#6f83ff12}.cat span{flex:1;font-weight:650}.cat i{width:40px;height:40px;display:grid;place-items:center;border-radius:10px;background:#596eff1f;color:#8da0ff;font-style:normal}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.card{overflow:hidden;border:1px solid #ffffff12;border-radius:15px;background:#ffffff08}.card:hover{transform:translateY(-4px);transition:.2s}.preview{position:relative;min-height:215px;padding:17px}.blue{background:linear-gradient(135deg,#1d2d68,#101527)}.purple{background:linear-gradient(135deg,#40225d,#171225)}.cyan{background:linear-gradient(135deg,#124c5a,#10191e)}.green{background:linear-gradient(135deg,#174d3b,#101a16)}.pink{background:linear-gradient(135deg,#59213e,#1d1119)}.orange{background:linear-gradient(135deg,#66391e,#1c1511)}.discordPrev{display:flex;width:100%;height:180px;overflow:hidden;border-radius:10px;background:#17191f;box-shadow:0 15px 40px #0005}.discordPrev aside{width:48px;padding:9px 6px;background:#101116}.discordPrev aside b{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:#566cff;font-size:8px}.discordPrev aside i{display:block;width:28px;height:28px;margin:8px auto;border-radius:50%;background:#272b34}.channels{flex:1;padding:11px 9px;background:#1a1c22}.channels small{display:block;color:#aeb5c2;font-size:7px;font-weight:800;margin:10px 0 7px}.channels span{display:block;color:#838b9c;font-size:8px;margin:6px 0}.heart{position:absolute;top:12px;right:12px;width:38px;height:38px;display:grid;place-items:center;border:1px solid #ffffff1f;border-radius:50%;background:#0006;color:#fff}.heart.liked{color:#ff6688}.cardBody{padding:19px}.cardBody label,.detail label{display:inline-block;color:#8da0ff;font-size:11px;font-weight:800;text-transform:uppercase}.cardBody h3{margin:8px 0 0;font-size:18px}.cardBody p{min-height:48px;margin:9px 0;color:#818a9b;font-size:13px;line-height:1.5}.meta{display:flex;gap:16px;margin:15px 0;color:#8b94a5;font-size:12px}.meta span{display:flex;align-items:center;gap:5px}.meta span:first-child{color:#ffca55}.view{width:100%;display:flex;justify-content:space-between;align-items:center;padding:11px 12px;border:1px solid #ffffff12;border-radius:9px;background:#ffffff08;color:#fff;font-weight:650}.cta{max-width:1150px;margin:40px auto 100px;padding:45px;display:flex;align-items:center;justify-content:space-between;gap:30px;border:1px solid #6e82ff33;border-radius:20px;background:#ffffff08}.cta h2{margin:0;font-size:28px}.cta p{color:#818b9c}.pageHead{display:flex;align-items:end;justify-content:space-between;gap:30px;margin-bottom:35px}.libSearch{min-width:320px;display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid #ffffff12;border-radius:10px;background:#ffffff08;color:#798397}.libSearch input{width:100%;border:0;background:transparent;color:#fff}.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px}.filters button{padding:8px 13px;border:1px solid #ffffff12;border-radius:8px;background:#ffffff08;color:#8c95a6}.filters .sel{background:#596eff;border-color:#596eff;color:#fff}.empty{min-height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#70798b}.empty h2,.empty h3{color:#fff}.back{border:0;background:transparent;color:#8c96a8;margin-bottom:24px}.detail{display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center}.detailPreview{min-height:430px;padding:45px;display:grid;place-items:center;border-radius:18px}.detailPreview .discordPrev{height:340px;max-width:560px}.detail h1{margin:10px 0 15px;font-size:46px;letter-spacing:-.04em}.detail>div:nth-child(2)>p{color:#8b95a7;line-height:1.7}.rating{display:flex;align-items:center;gap:7px;margin:20px 0;color:#ffca55}.detailGrid{display:grid;grid-template-columns:1.4fr .6fr;gap:18px;margin-top:45px}.panel{padding:25px;border:1px solid #ffffff12;border-radius:15px;background:#ffffff08}.panel h2{margin-top:0;font-size:19px}.structure{padding:14px 0;border-bottom:1px solid #ffffff0f}.structure strong{display:block;margin-bottom:9px;color:#aab2c1;font-size:11px}.structure span{display:block;padding:7px 0;color:#858e9f;font-size:14px}.info{display:flex;justify-content:space-between;padding:15px 0;border-bottom:1px solid #ffffff0f}.info span{color:#747e90}.dashboard{display:grid;grid-template-columns:230px 1fr;gap:35px}.side{display:flex;flex-direction:column;gap:5px}.user{display:flex;gap:10px;padding:12px;margin-bottom:15px;border:1px solid #ffffff12;border-radius:12px;background:#ffffff08}.user>b{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;background:#596eff}.user small{display:block;color:#727c8e;font-size:11px;margin-top:3px}.side button{display:flex;align-items:center;gap:10px;border:0;padding:11px;border-radius:9px;background:transparent;color:#858e9e;text-align:left}.side button:hover,.side .active{background:#ffffff0f;color:#fff}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:30px}.stat{display:flex;align-items:center;gap:13px;padding:18px;border:1px solid #ffffff12;border-radius:13px;background:#ffffff08}.stat svg{width:40px;height:40px;padding:10px;border-radius:10px;background:#596eff1f;color:#8da0ff}.stat span{color:#737d8e;font-size:11px}.stat b{display:block;color:#fff;font-size:22px;margin-top:3px}.adminGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.adminCard{display:flex;align-items:center;gap:15px;padding:20px;border:1px solid #ffffff12;border-radius:14px;background:#ffffff08;color:#fff;text-align:left}.adminCard svg:first-child{width:43px;height:43px;padding:11px;border-radius:11px;background:#596eff1f;color:#8da0ff}.adminCard span{flex:1}.adminCard small{display:block;color:#737d8f;margin-top:4px}.overlay{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:20px;background:#000b;backdrop-filter:blur(8px)}.modal{position:relative;width:100%;max-width:440px;padding:35px;border:1px solid #ffffff17;border-radius:18px;background:#11141b;box-shadow:0 30px 100px #0009;text-align:center}.close{position:absolute;top:13px;right:13px;width:35px;height:35px;display:grid;place-items:center;border:0;border-radius:8px;background:#ffffff0d;color:#8992a3}.modalLogo{margin:0 auto 20px}.modal h2{margin:0 0 10px}.modal p{color:#7e8798;line-height:1.6}.modal small{display:block;margin-top:15px;color:#606a7c}.discord{width:100%;display:flex;align-items:center;justify-content:center;gap:9px;margin-top:22px;padding:13px;border:0;border-radius:10px;background:#5865f2;color:#fff;font-weight:750}.modal form{display:flex;flex-direction:column;gap:14px;text-align:left;margin-top:20px}.modal label{display:flex;flex-direction:column;gap:7px;color:#aab2c0;font-size:12px;font-weight:700}.modal input,.modal textarea,.modal select{width:100%;border:1px solid #ffffff12;border-radius:9px;background:#0b0e13;color:#fff;padding:11px}.full{width:100%}.success{padding:15px}.success svg{color:#65d99a}footer{border-top:1px solid #ffffff12;background:#05070a;padding:55px 5% 20px}.footerTop{max-width:1150px;margin:auto;display:flex;justify-content:space-between;gap:50px}.footCols{display:flex;gap:70px}.footCols div{display:flex;flex-direction:column;gap:9px}.footCols button{border:0;background:transparent;color:#697386;text-align:left;padding:0}.footBottom{max-width:1150px;margin:50px auto 0;padding-top:20px;border-top:1px solid #ffffff0f;color:#555f70;font-size:11px;display:flex;justify-content:space-between}@media(max-width:1000px){.grid{grid-template-columns:repeat(2,1fr)}.catGrid{grid-template-columns:repeat(2,1fr)}.detail,.detailGrid{grid-template-columns:1fr}.dashboard{grid-template-columns:1fr}.side{display:none}.stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:750px){.links,.login{display:none}.hamb{display:block}.mobileLinks{display:flex;flex-direction:column;padding:10px 5%;background:#0a0c11;border-bottom:1px solid #ffffff12}.grid,.catGrid,.adminGrid{grid-template-columns:1fr}.pageHead,.sectionHead,.cta{align-items:flex-start;flex-direction:column}.libSearch{min-width:0;width:100%}.cta{margin:20px 5% 70px;padding:30px}.footerTop{flex-direction:column}.footCols{gap:35px;flex-wrap:wrap}}@media(max-width:500px){.brand strong{font-size:12px}.hero h1{font-size:43px}.heroSearch button{display:none}.heroSearch{width:100%}.detail h1{font-size:34px}.stats{grid-template-columns:1fr}}'''
+
+files["api/discord/callback.js"] = r'''export default async function handler(req, res) {
+  const { code, error } = req.query || {};
+
+  if (error) {
+    return res.status(400).send(`Discord authorization failed: ${error}`);
+  }
+
+  if (!code) {
+    return res.status(400).send("Missing Discord OAuth authorization code.");
+  }
+
+  const clientId = process.env.DISCORD_CLIENT_ID;
+  const clientSecret = process.env.DISCORD_CLIENT_SECRET;
+  const redirectUri = process.env.DISCORD_REDIRECT_URI;
+
+  if (!clientId || !clientSecret || !redirectUri) {
+    return res.status(500).send("Discord OAuth environment variables are not configured.");
+  }
+
+  try {
+    const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: redirectUri
+      })
+    });
+
+    const token = await tokenResponse.json();
+
+    if (!tokenResponse.ok) {
+      return res.status(400).json({
+        error: "Discord token exchange failed",
+        details: token
+      });
+    }
+
+    const userResponse = await fetch("https://discord.com/api/users/@me", {
+      headers: { Authorization: `Bearer ${token.access_token}` }
+    });
+
+    const user = await userResponse.json();
+
+    if (!userResponse.ok) {
+      return res.status(400).json({
+        error: "Discord user lookup failed",
+        details: user
+      });
+    }
+
+    // This demo stores the user only in the response.
+    // Add a signed session/database here before using this in production.
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    return res.status(200).send(`
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>PDS Templates — Login Complete</title>
+          <style>
+            body{margin:0;background:#07090d;color:#fff;font-family:system-ui;display:grid;place-items:center;min-height:100vh}
+            .box{max-width:480px;padding:35px;border:1px solid #ffffff18;border-radius:18px;background:#11141b;text-align:center}
+            img{width:80px;height:80px;border-radius:50%;margin-bottom:15px}
+            a{display:inline-block;margin-top:18px;padding:12px 18px;border-radius:9px;background:#596eff;color:#fff;text-decoration:none}
+          </style>
+        </head>
+        <body>
+          <div class="box">
+            ${user.avatar ? `<img src="https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128" alt="">` : ""}
+            <h1>Welcome, ${escapeHtml(user.global_name || user.username)}!</h1>
+            <p>Your Discord account was authenticated successfully.</p>
+            <p>Next step: connect this callback to your production session/database.</p>
+            <a href="/">Return to PDS Templates™</a>
+          </div>
+        </body>
+      </html>
+    `);
+  } catch (err) {
+    return res.status(500).send("Unexpected OAuth error.");
+  }
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}'''
+
+files["README.md"] = r'''# PDS Discord Templates™
+
+Prime District Studios™ — PDS Templates™.
+
+A modern Discord template discovery website built with React + Vite and designed for Vercel.
+
+## Features
+
+- PDS-branded homepage
+- Template library
+- Search and category filtering
+- Template detail pages
+- Favorites
+- User dashboard
+- Admin dashboard UI
+- Template submission UI
+- Discord OAuth2 login flow
+- Responsive design
+- Vercel-ready API callback
+
+## Local setup
+
+```bash
+npm install
+npm run dev
